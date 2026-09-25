@@ -1,11 +1,36 @@
+import os
+import streamlit as st
 from langchain_ollama import ChatOllama
 
-# Faster model for dashboard analysis
-llm = ChatOllama(
-    model="llama3.2",
-    base_url="http://127.0.0.1:11434",
-    temperature=0
-)
+
+def _get_secret(key):
+    """Read from Streamlit secrets first, then env vars. Never raises."""
+    try:
+        if key in st.secrets:
+            return st.secrets[key]
+    except Exception:
+        pass
+    return os.environ.get(key)
+
+
+GROQ_API_KEY = _get_secret("GROQ_API_KEY")
+
+if GROQ_API_KEY:
+    # Cloud / demo mode: use Groq's hosted Llama 3.3 70B (free tier)
+    from langchain_groq import ChatGroq
+
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        api_key=GROQ_API_KEY,
+        temperature=0
+    )
+else:
+    # Local dev mode: use Ollama running on this machine
+    llm = ChatOllama(
+        model="llama3.2",
+        base_url="http://127.0.0.1:11434",
+        temperature=0
+    )
 
 
 def analyze_data(df, task):
