@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 from modules.loader import load_file
 from modules.analyst import analyze_data
@@ -92,6 +93,138 @@ if uploaded_file:
         working_df.head(20),
         use_container_width=True
     )
+
+    st.divider()
+
+    # ----------------------------------
+    # VISUALIZATIONS
+    # ----------------------------------
+
+    st.subheader("📈 Visualizations")
+
+    chart_type = st.selectbox(
+        "Select Chart Type",
+        [
+            "Histogram",
+            "Box Plot",
+            "Bar Chart",
+            "Line Chart",
+            "Scatter Plot",
+            "Pie Chart",
+            "Correlation Heatmap"
+        ]
+    )
+
+    all_columns = working_df.columns.tolist()
+
+    numeric_cols = working_df.select_dtypes(
+        include="number"
+    ).columns.tolist()
+
+    categorical_cols = working_df.select_dtypes(
+        include=["object", "category"]
+    ).columns.tolist()
+
+    if chart_type == "Histogram":
+
+        if len(numeric_cols) == 0:
+            st.warning("No numeric columns found.")
+        else:
+            col1, col2 = st.columns(2)
+            with col1:
+                column = st.selectbox("Select Column", numeric_cols)
+            with col2:
+                compare_col = st.selectbox(
+                    "Compare By (optional)",
+                    ["None"] + categorical_cols,
+                    key="hist_compare"
+                )
+
+            if compare_col == "None":
+                fig = px.histogram(working_df, x=column, title=f"Distribution of {column}")
+            else:
+                fig = px.histogram(
+                    working_df, x=column, color=compare_col,
+                    barmode="overlay", title=f"Distribution of {column} by {compare_col}"
+                )
+            st.plotly_chart(fig, use_container_width=True)
+
+    elif chart_type == "Box Plot":
+
+        if len(numeric_cols) == 0:
+            st.warning("No numeric columns found.")
+        else:
+            col1, col2 = st.columns(2)
+            with col1:
+                column = st.selectbox("Select Column", numeric_cols)
+            with col2:
+                compare_col = st.selectbox(
+                    "Compare By (optional)",
+                    ["None"] + categorical_cols,
+                    key="box_compare"
+                )
+
+            if compare_col == "None":
+                fig = px.box(working_df, y=column, title=f"Box Plot of {column}")
+            else:
+                fig = px.box(
+                    working_df, x=compare_col, y=column, color=compare_col,
+                    title=f"Box Plot of {column} by {compare_col}"
+                )
+            st.plotly_chart(fig, use_container_width=True)
+
+    elif chart_type == "Bar Chart":
+
+        col1, col2 = st.columns(2)
+        with col1:
+            x_col = st.selectbox("X Axis", all_columns)
+        with col2:
+            y_col = st.selectbox("Y Axis", numeric_cols)
+
+        if x_col and y_col:
+            grouped = working_df.groupby(x_col)[y_col].mean().reset_index()
+            fig = px.bar(grouped, x=x_col, y=y_col, title=f"{y_col} by {x_col}")
+            st.plotly_chart(fig, use_container_width=True)
+
+    elif chart_type == "Line Chart":
+
+        col1, col2 = st.columns(2)
+        with col1:
+            x_col = st.selectbox("X Axis", all_columns)
+        with col2:
+            y_col = st.selectbox("Y Axis", numeric_cols)
+
+        if x_col and y_col:
+            fig = px.line(working_df, x=x_col, y=y_col, title=f"{y_col} over {x_col}")
+            st.plotly_chart(fig, use_container_width=True)
+
+    elif chart_type == "Scatter Plot":
+
+        col1, col2 = st.columns(2)
+        with col1:
+            x_col = st.selectbox("X Axis", numeric_cols)
+        with col2:
+            y_col = st.selectbox("Y Axis", numeric_cols)
+
+        if x_col and y_col:
+            fig = px.scatter(working_df, x=x_col, y=y_col, title=f"{x_col} vs {y_col}")
+            st.plotly_chart(fig, use_container_width=True)
+
+    elif chart_type == "Pie Chart":
+
+        if len(categorical_cols) == 0:
+            st.warning("No categorical columns found.")
+        else:
+            column = st.selectbox("Select Column", categorical_cols)
+            counts = working_df[column].value_counts()
+            fig = px.pie(values=counts.values, names=counts.index, title=f"Distribution of {column}")
+            st.plotly_chart(fig, use_container_width=True)
+
+    elif chart_type == "Correlation Heatmap":
+
+        corr = working_df.select_dtypes(include="number").corr()
+        fig = px.imshow(corr, text_auto=True, title="Correlation Heatmap")
+        st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
 
